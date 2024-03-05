@@ -49,10 +49,10 @@ void Solve(const tsp::AdjacencyMatrix& matrix) {
       for (uint32_t j = 0; j < matrix.size(); ++j) {
         if (i != j) {
           // if i != j: 0 <= c_ij <= 1 (taken or not)
-          result[i][j] = solver->MakeNumVar(0.0, 1.0, names[i][j]);
+          result[i][j] = solver->MakeIntVar(0.0, 1.0, names[i][j]);
         } else {
           // if i == j: c_ij = 0
-          result[i][j] = solver->MakeNumVar(0.0, 0.0, names[i][j]);
+          result[i][j] = solver->MakeIntVar(0.0, 0.0, names[i][j]);
         }
       }
     }
