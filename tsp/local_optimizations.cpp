@@ -50,6 +50,9 @@ std::pair<tsp::Solution, bool> ImproveNeighbours(const tsp::AdjacencyMatrix& mat
         }
       } while (std::next_permutation(perm.begin(), perm.end()));
     }
+    if (is_improved) {
+      return std::make_pair(solution, is_improved);
+    }
   }
   return std::make_pair(solution, is_improved);
 }
@@ -64,40 +67,35 @@ std::pair<tsp::Solution, bool> ImproveAny(const tsp::AdjacencyMatrix& matrix,
        ++permutation_size) {
     std::cerr << "ImproveAny, permutation_size = " << permutation_size << std::endl;
 
-    for (uint32_t i = 0; i < matrix.size(); ++i) {
-      std::cerr << "ImproveAny, permutation_size = " << permutation_size << "(" << i << "/"
-                << matrix.size() << ")" << std::endl;
-
-      std::vector<uint32_t> to_permute(matrix.size(), 0);
-      for (uint32_t i = matrix.size() - 1; i >= matrix.size() - permutation_size; --i) {
-        to_permute[i] = 1;
-      }
-      do {
-        std::vector<uint32_t> ones_positions;
-        for (uint32_t i = 0; i < matrix.size(); ++i) {
-          if (to_permute[i] == 1) {
-            ones_positions.push_back(i);
-          }
-        }
-        std::vector<uint32_t> perm(permutation_size);
-        std::iota(perm.begin(), perm.end(), 0);
-        do {
-          auto new_solution = solution;
-          for (uint32_t j = 0; j < permutation_size; ++j) {
-            new_solution[ones_positions[j]] = solution[ones_positions[perm[j]]];
-          }
-
-          tsp::Weight new_score = tsp::GetScore(matrix, new_solution);
-          if (new_score < solution_score) {
-            solution_score = new_score;
-            solution = new_solution;
-            is_improved = true;
-            std::cerr << "new score = " << tsp::GetScore(matrix, solution) << std::endl;
-            break;
-          }
-        } while (std::next_permutation(perm.begin(), perm.end()));
-      } while (std::next_permutation(to_permute.begin(), to_permute.end()));
+    std::vector<uint32_t> to_permute(matrix.size(), 0);
+    for (uint32_t i = matrix.size() - 1; i >= matrix.size() - permutation_size; --i) {
+      to_permute[i] = 1;
     }
+    do {
+      std::vector<uint32_t> ones_positions;
+      for (uint32_t i = 0; i < matrix.size(); ++i) {
+        if (to_permute[i] == 1) {
+          ones_positions.push_back(i);
+        }
+      }
+      std::vector<uint32_t> perm(permutation_size);
+      std::iota(perm.begin(), perm.end(), 0);
+      do {
+        auto new_solution = solution;
+        for (uint32_t j = 0; j < permutation_size; ++j) {
+          new_solution[ones_positions[j]] = solution[ones_positions[perm[j]]];
+        }
+
+        tsp::Weight new_score = tsp::GetScore(matrix, new_solution);
+        if (new_score < solution_score) {
+          solution_score = new_score;
+          solution = new_solution;
+          is_improved = true;
+          std::cerr << "new score = " << tsp::GetScore(matrix, solution) << std::endl;
+          break;
+        }
+      } while (std::next_permutation(perm.begin(), perm.end()));
+    } while (std::next_permutation(to_permute.begin(), to_permute.end()));
   }
   return std::make_pair(solution, is_improved);
 }
@@ -108,13 +106,13 @@ tsp::Solution LocalSolve(const tsp::AdjacencyMatrix& matrix,
   auto solution = initial_solution;
   while (true) {
     {
-      auto [new_solution, is_improved] = ImproveNeighbours(matrix, solution, 8);
+      auto [new_solution, is_improved] = ImproveNeighbours(matrix, solution, 9);
       if (is_improved) {
         solution = new_solution;
         continue;
       }
     }
-    auto [new_solution, is_improved] = ImproveAny(matrix, solution, 3);
+    auto [new_solution, is_improved] = ImproveAny(matrix, solution, 4);
     if (is_improved) {
       solution = new_solution;
       continue;
