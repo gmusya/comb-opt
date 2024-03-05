@@ -14,5 +14,8 @@ target_link_libraries(tsp-spanning tsp ortools::ortools)
 add_executable(tsp-local local_optimizations.cpp)
 target_link_libraries(tsp-local tsp ortools::ortools)
 
+add_executable(tsp-iteratively iteratively.cpp)
+target_link_libraries(tsp-iteratively tsp ortools::ortools)
+
 add_executable(lp lp.cpp)
 target_link_libraries(lp tsp ortools::ortools)
