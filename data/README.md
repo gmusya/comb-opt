@@ -4,4 +4,4 @@
 
 `./tsp-local --input $DATA_DIR/input.txt --output $DATA_DIR/output-local.txt --initial_route $DATA_DIR/output-spanning.txt`
 
-`./lp --input $DATA_DIR/input.txt`
+`./lp --input $DATA_DIR/input.txt --output $DATA_DIR/output-milp.txt`

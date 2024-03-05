@@ -6,9 +6,21 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <sys/types.h>
 
+template<typename Callback>
+void DFS(int v, std::vector<bool>& used, const tsp::AdjacencyLists& graph, Callback& callback) {
+  used[v] = true;
+  callback(v);
+  for (uint32_t u : graph[v]) {
+    if (used[u]) {
+      continue;
+    }
+    DFS(u, used, graph, callback);
+  }
+}
 
 // w_ij --- distances
 // c_ij --- is edge taken
@@ -18,7 +30,7 @@
 // \sum_{i} c_ij <= 1 (in-deg)
 // \sum_{j} c_ij <= 1 (out-deg)
 // 0 <= c_ij + c_ji <= 1 (only one direction)
-void Solve(const tsp::AdjacencyMatrix& matrix) {
+tsp::Solution MILPSolve(const tsp::AdjacencyMatrix& matrix) {
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
   using operations_research::MPSolver;
@@ -26,8 +38,8 @@ void Solve(const tsp::AdjacencyMatrix& matrix) {
 
   std::unique_ptr<MPSolver> solver(MPSolver::CreateSolver("SCIP"));
   if (!solver) {
-    LOG(WARNING) << "SCIP solver unavailable.";
-    return;
+    LOG(ERROR) << "SCIP solver unavailable.";
+    throw std::runtime_error("SCIP solver unavailable.");
   }
 
   const std::vector<std::vector<std::string>> names = [&]() {
@@ -107,23 +119,69 @@ void Solve(const tsp::AdjacencyMatrix& matrix) {
     return objective;
   }();
 
-  const MPSolver::ResultStatus result_status = solver->Solve();
-  // Check that the problem has an optimal solution.
-  if (result_status != MPSolver::OPTIMAL) {
-    LOG(FATAL) << "The problem does not have an optimal solution!";
-  }
+  while (true) {
+    const MPSolver::ResultStatus result_status = solver->Solve();
 
-  LOG(INFO) << "Solution:";
-  LOG(INFO) << "Optimal objective value = " << objective->Value();
+    // Check that the problem has an optimal solution.
+    if (result_status != MPSolver::OPTIMAL) {
+      LOG(FATAL) << "The problem does not have an optimal solution!";
+    }
+
+    LOG(INFO) << "Solution:";
+    LOG(INFO) << "Optimal objective value = " << objective->Value();
+
+    tsp::AdjacencyLists adj_lists(matrix.size());
+    for (uint32_t i = 0; i < matrix.size(); ++i) {
+      for (uint32_t j = 0; j < matrix.size(); ++j) {
+        if (is_edge_taken[i][j]->solution_value() == 1) {
+          adj_lists[i].push_back(j);
+          adj_lists[j].push_back(i);
+        }
+      }
+    }
+
+    std::vector<std::vector<tsp::Vertex>> comps;
+    std::vector<bool> used(matrix.size());
+    for (tsp::Vertex v = 0; v < matrix.size(); ++v) {
+      if (!used[v]) {
+        comps.emplace_back();
+        auto lambda = [&](tsp::Vertex v) {
+          comps.back().emplace_back(v);
+        };
+        DFS(v, used, adj_lists, lambda);
+      }
+    }
+
+    if (comps.size() == 1) {
+      return comps[0];
+    }
+
+    for (const auto& comp : comps) {
+      MPConstraint* const c = solver->MakeRowConstraint(0, comp.size() - 1);
+      for (tsp::Vertex v : comp) {
+        for (tsp::Vertex u : comp) {
+          c->SetCoefficient(is_edge_taken[v][u], 1);
+        }
+      }
+    }
+  }
 }
 
 ABSL_FLAG(std::string, input, {}, "Input file");
+ABSL_FLAG(std::string, output, {}, "Output file");
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   std::string input = absl::GetFlag(FLAGS_input);
+  std::string output = absl::GetFlag(FLAGS_output);
 
   tsp::AdjacencyMatrix matrix = tsp::AdjacencyMatrixFromFile(input);
-  Solve(matrix);
+
+  tsp::Solution solution = MILPSolve(matrix);
+
+  tsp::Weight score = tsp::GetScore(matrix, solution);
+  std::cerr << "score = " << score << std::endl;
+  tsp::SolutionToFile(solution, output);
+
   return 0;
 }
