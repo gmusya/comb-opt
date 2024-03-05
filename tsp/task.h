@@ -10,6 +10,7 @@ using Weight = uint32_t;
 using AdjacencyMatrix = std::vector<std::vector<Weight>>;
 using Vertex = uint32_t;
 using Solution = std::vector<Vertex>;
+using AdjacencyLists = std::vector<std::vector<Vertex>>;
 
 AdjacencyMatrix AdjacencyMatrixFromFile(const std::string& filename);
 
