@@ -10,3 +10,6 @@ target_link_libraries(tsp-random tsp ortools::ortools)
 
 add_executable(tsp-spanning spanning.cpp)
 target_link_libraries(tsp-spanning tsp ortools::ortools)
+
+add_executable(tsp-local local_optimizations.cpp)
+target_link_libraries(tsp-local tsp ortools::ortools)

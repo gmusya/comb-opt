@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cstdint>
 #include <fstream>
+#include <stdexcept>
+#include <sys/types.h>
 
 namespace tsp {
 
@@ -30,7 +32,21 @@ Solution SolutionFromFile(const std::string& filename) {
   return result;
 }
 
+bool static ValidateSolution(const Solution& solution) {
+  auto arr = solution;
+  std::sort(arr.begin(), arr.end());
+  for (uint32_t i = 0; i < arr.size(); ++i) {
+    if (i != arr[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void SolutionToFile(const Solution& solution, const std::string& filename) {
+  if (!ValidateSolution(solution)) {
+    throw std::runtime_error("Solution is invalid");
+  }
   std::ofstream output(filename);
   uint32_t vertices_count = solution.size();
   output << vertices_count << '\n';
