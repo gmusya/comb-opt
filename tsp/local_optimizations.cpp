@@ -58,7 +58,7 @@ std::vector<tsp::Vertex> FindOptimalPath(const tsp::AdjacencyMatrix& matrix,
   std::vector<tsp::Vertex> optimal_path;
   tsp::Vertex last = size - 1;
   uint32_t last_mask = (1u << size) - 1;
-  std::cerr << "Value = " << result[last][last_mask] << std::endl;
+  // std::cerr << "Value = " << result[last][last_mask] << std::endl;
   while (last != 0) {
     optimal_path.emplace_back(vertices[last]);
     auto new_mask = (last_mask ^ (1u << last));
@@ -78,11 +78,11 @@ std::pair<tsp::Solution, bool> ImproveNeighbours(const tsp::AdjacencyMatrix& mat
   bool is_improved = false;
   for (uint32_t permutation_size = 2; permutation_size <= max_permutation_size;
        ++permutation_size) {
-    std::cerr << "ImproveNeighbours, permutation_size = " << permutation_size << std::endl;
+    // std::cerr << "ImproveNeighbours, permutation_size = " << permutation_size << std::endl;
 
     for (uint32_t i = 0; i < matrix.size(); ++i) {
-      std::cerr << "ImproveNeighbours, permutation_size = " << permutation_size << "(" << i << "/"
-                << matrix.size() << ")" << std::endl;
+      // std::cerr << "ImproveNeighbours, permutation_size = " << permutation_size << "(" << i << "/"
+      // << matrix.size() << ")" << std::endl;
 
       std::vector<tsp::Vertex> vertices;
       for (uint32_t j = 0; j < permutation_size; ++j) {
@@ -99,7 +99,7 @@ std::pair<tsp::Solution, bool> ImproveNeighbours(const tsp::AdjacencyMatrix& mat
         solution_score = new_score;
         solution = new_solution;
         is_improved = true;
-        std::cerr << "score = " << solution_score << std::endl;
+        // std::cerr << "score = " << solution_score << std::endl;
         break;
       }
     }
@@ -118,7 +118,7 @@ std::pair<tsp::Solution, bool> ImproveAny(const tsp::AdjacencyMatrix& matrix,
   bool is_improved = false;
   for (uint32_t permutation_size = 2; permutation_size <= max_permutation_size;
        ++permutation_size) {
-    std::cerr << "ImproveAny, permutation_size = " << permutation_size << std::endl;
+    // std::cerr << "ImproveAny, permutation_size = " << permutation_size << std::endl;
 
     std::vector<uint32_t> to_permute(matrix.size(), 0);
     for (uint32_t i = matrix.size() - 1; i >= matrix.size() - permutation_size; --i) {
@@ -158,8 +158,9 @@ std::pair<tsp::Solution, bool> ImproveShift(const tsp::AdjacencyMatrix& matrix,
   auto solution = initial_solution;
   tsp::Weight solution_score = tsp::GetScore(matrix, solution);
   bool is_improved = false;
-
+  std::cerr << "ImproveShift" << std::endl;
   for (uint32_t from = 0; from < matrix.size(); ++from) {
+    std::cerr << "ImproveShift (" << from << "/" << matrix.size() << ")" << std::endl;
     for (uint32_t len = 1; len < matrix.size() / 2; ++len) {
       std::vector<tsp::Vertex> old_v;
       std::vector<tsp::Vertex> new_v;
@@ -176,7 +177,10 @@ std::pair<tsp::Solution, bool> ImproveShift(const tsp::AdjacencyMatrix& matrix,
         std::vector<tsp::Vertex> new_solution = new_v;
         new_solution.insert(new_solution.begin() + to, old_v.begin(), old_v.end());
 
-        tsp::Weight new_score = tsp::GetScore(matrix, new_solution);
+        auto [new_new_solution, is_improved_2] = ImproveNeighbours(matrix, new_solution, 5);
+        tsp::Weight new_score = tsp::GetScore(matrix, new_new_solution);
+        new_solution = std::move(new_new_solution);
+
         if (new_score < solution_score) {
           solution_score = new_score;
           solution = new_solution;
