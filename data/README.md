@@ -6,4 +6,4 @@
 
 `./tsp-iteratively --input $DATA_DIR/input.txt --output $DATA_DIR/output-iteratively.txt`
 
-`./lp --input $DATA_DIR/input.txt --output $DATA_DIR/output-milp.txt`
+`./tsp-milp-dfj --input $DATA_DIR/input.txt --output $DATA_DIR/output-milp.txt`

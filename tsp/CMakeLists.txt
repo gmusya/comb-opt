@@ -17,5 +17,5 @@ target_link_libraries(tsp-local tsp ortools::ortools)
 add_executable(tsp-iteratively iteratively.cpp)
 target_link_libraries(tsp-iteratively tsp ortools::ortools)
 
-add_executable(lp lp.cpp)
-target_link_libraries(lp tsp ortools::ortools)
+add_executable(tsp-milp-dfj milp_dfj.cpp)
+target_link_libraries(tsp-milp-dfj tsp ortools::ortools)
