@@ -19,3 +19,12 @@ target_link_libraries(tsp-iteratively tsp ortools::ortools)
 
 add_executable(tsp-milp-dfj milp_dfj.cpp)
 target_link_libraries(tsp-milp-dfj tsp ortools::ortools)
+
+add_executable(tsp-milp-mtz milp_mtz.cpp)
+target_link_libraries(tsp-milp-mtz tsp ortools::ortools)
+
+add_executable(tsp-lp-dfj lp_dfj.cpp)
+target_link_libraries(tsp-lp-dfj tsp ortools::ortools)
+
+add_executable(tsp-lp-mtz lp_mtz.cpp)
+target_link_libraries(tsp-lp-mtz tsp ortools::ortools)
