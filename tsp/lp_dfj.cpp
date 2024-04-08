@@ -26,11 +26,9 @@ void DFS(int v, std::vector<bool>& used, const tsp::AdjacencyLists& graph, Callb
 // w_ij --- distances
 // c_ij --- is edge taken
 // \sum_{ij} w_ij * c_ij -> min
-// if i != j: 0 <= c_ij <= 1 (taken or not)
+// if i < j: 0 <= c_ij <= 1 (taken or not)
 // if i == j: c_ij = 0
-// \sum_{i} c_ij <= 1 (in-deg)
-// \sum_{j} c_ij <= 1 (out-deg)
-// 0 <= c_ij + c_ji <= 1 (only one direction)
+// \sum_{i} c_ij <= 2
 void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
@@ -73,36 +71,24 @@ void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
   }();
   LOG(INFO) << "Number of variables = " << solver->NumVariables();
 
-  // 0 <= c_ij <= 1 (taken or not)
-  for (uint32_t i = 0; i < matrix.size(); ++i) {
-    for (uint32_t j = 0; j < matrix.size(); ++j) {
-      MPConstraint* const c = solver->MakeRowConstraint(0, 1);
-      c->SetCoefficient(is_edge_taken[i][j], 1);
-    }
-  }
-
-  // \sum_{i} c_ij = 1 (in-deg)
-  for (uint32_t j = 0; j < matrix.size(); ++j) {
-    MPConstraint* const c = solver->MakeRowConstraint(1, 1);
-    for (uint32_t i = 0; i < matrix.size(); ++i) {
-      c->SetCoefficient(is_edge_taken[i][j], 1);
-    }
-  }
-
-  // \sum_{j} c_ij = 1 (out-deg)
-  for (uint32_t i = 0; i < matrix.size(); ++i) {
-    MPConstraint* const c = solver->MakeRowConstraint(1, 1);
-    for (uint32_t j = 0; j < matrix.size(); ++j) {
-      c->SetCoefficient(is_edge_taken[i][j], 1);
-    }
-  }
-
-  // 0 <= c_ij + c_ji <= 1 (only one direction)
+  // if i < j: 0 <= c_ij <= 1 (taken or not)
   for (uint32_t i = 0; i < matrix.size(); ++i) {
     for (uint32_t j = i + 1; j < matrix.size(); ++j) {
       MPConstraint* const c = solver->MakeRowConstraint(0, 1);
       c->SetCoefficient(is_edge_taken[i][j], 1);
-      c->SetCoefficient(is_edge_taken[j][i], 1);
+    }
+  }
+
+  // \sum_{i} c_ij = 2
+  for (uint32_t j = 0; j < matrix.size(); ++j) {
+    MPConstraint* const c = solver->MakeRowConstraint(2, 2);
+    for (uint32_t i = 0; i < matrix.size(); ++i) {
+      if (i == j) {
+        continue;
+      }
+      int x = std::min(i, j);
+      int y = std::max(i, j);
+      c->SetCoefficient(is_edge_taken[x][y], 1);
     }
   }
 
