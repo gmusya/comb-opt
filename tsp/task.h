@@ -16,7 +16,7 @@ AdjacencyMatrix AdjacencyMatrixFromFile(const std::string& filename);
 
 Solution SolutionFromFile(const std::string& filename);
 
-void SolutionToFile(const Solution& solution, const std::string& filename);
+void SolutionToFile(const Solution& solution, const std::string& filename, Weight total_length);
 
 Weight GetScore(const AdjacencyMatrix& matrix, const Solution& solution);
 

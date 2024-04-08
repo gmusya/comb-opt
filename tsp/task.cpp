@@ -43,7 +43,8 @@ bool static ValidateSolution(const Solution& solution) {
   return true;
 }
 
-void SolutionToFile(const Solution& solution, const std::string& filename) {
+void SolutionToFile(const Solution& solution, const std::string& filename,
+                    Weight total_length) {
   if (!ValidateSolution(solution)) {
     throw std::runtime_error("Solution is invalid");
   }
@@ -57,6 +58,7 @@ void SolutionToFile(const Solution& solution, const std::string& filename) {
     output << solution[i];
   }
   output << '\n';
+  output << total_length << '\n';
 }
 
 Weight GetScore(const AdjacencyMatrix& matrix, const Solution& solution) {

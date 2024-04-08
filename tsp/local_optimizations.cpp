@@ -238,6 +238,6 @@ int main(int argc, char** argv) {
   solution = LocalSolve(matrix, solution);
   tsp::Weight score = tsp::GetScore(matrix, solution);
   std::cerr << "score = " << score << std::endl;
-  tsp::SolutionToFile(solution, output);
+  tsp::SolutionToFile(solution, output, score);
   return 0;
 }
