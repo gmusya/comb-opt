@@ -4,6 +4,7 @@
 #include "tsp/task.h"
 
 #include <cstdint>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -30,7 +31,7 @@ void DFS(int v, std::vector<bool>& used, const tsp::AdjacencyLists& graph, Callb
 // \sum_{i} c_ij <= 1 (in-deg)
 // \sum_{j} c_ij <= 1 (out-deg)
 // 0 <= c_ij + c_ji <= 1 (only one direction)
-void LPLowerBound(const tsp::AdjacencyMatrix& matrix) {
+void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
   using operations_research::MPConstraint;
   using operations_research::MPObjective;
   using operations_research::MPSolver;
@@ -119,26 +120,73 @@ void LPLowerBound(const tsp::AdjacencyMatrix& matrix) {
     return objective;
   }();
 
-  const MPSolver::ResultStatus result_status = solver->Solve();
+  tsp::AdjacencyLists old_lists;
 
-  // Check that the problem has an optimal solution.
-  if (result_status != MPSolver::OPTIMAL) {
-    LOG(FATAL) << "The problem does not have an optimal solution!";
+  output = output.substr(0, output.size() - 4);
+  size_t iter = 0;
+  while (true) {
+    const MPSolver::ResultStatus result_status = solver->Solve();
+
+    std::cerr << "Solve start" << std::endl;
+    ++iter;
+    std::ofstream out(output + std::to_string(iter) + ".txt");
+    out << matrix.size() << '\n';
+    for (int i = 0; i < matrix.size(); ++i) {
+      for (int j = 0; j < matrix.size(); ++j) {
+        out << is_edge_taken[i][j]->solution_value() << ' ';
+      }
+      out << '\n';
+    }
+
+    tsp::AdjacencyLists adj_lists(matrix.size());
+    for (uint32_t i = 0; i < matrix.size(); ++i) {
+      for (uint32_t j = 0; j < matrix.size(); ++j) {
+        if (is_edge_taken[i][j]->solution_value() == 1) {
+          adj_lists[i].push_back(j);
+          adj_lists[j].push_back(i);
+        }
+      }
+    }
+
+    if (old_lists == adj_lists) {
+      break;
+    }
+    old_lists = adj_lists;
+
+    std::vector<std::vector<tsp::Vertex>> comps;
+    std::vector<bool> used(matrix.size());
+    for (tsp::Vertex v = 0; v < matrix.size(); ++v) {
+      if (!used[v]) {
+        comps.emplace_back();
+        auto lambda = [&](tsp::Vertex v) {
+          comps.back().emplace_back(v);
+        };
+        DFS(v, used, adj_lists, lambda);
+      }
+    }
+
+    for (const auto& comp : comps) {
+      MPConstraint* const c = solver->MakeRowConstraint(0, comp.size() - 1);
+      for (tsp::Vertex v : comp) {
+        for (tsp::Vertex u : comp) {
+          c->SetCoefficient(is_edge_taken[v][u], 1);
+        }
+      }
+    }
   }
-
-  LOG(INFO) << "Solution:";
-  LOG(INFO) << "Optimal objective value = " << objective->Value();
 }
 
 ABSL_FLAG(std::string, input, {}, "Input file");
+ABSL_FLAG(std::string, output, {}, "Output file");
 
 int main(int argc, char** argv) {
   absl::ParseCommandLine(argc, argv);
   std::string input = absl::GetFlag(FLAGS_input);
+  std::string output = absl::GetFlag(FLAGS_output);
 
   tsp::AdjacencyMatrix matrix = tsp::AdjacencyMatrixFromFile(input);
 
-  LPLowerBound(matrix);
+  LPLowerBound(matrix, output);
 
   return 0;
 }
