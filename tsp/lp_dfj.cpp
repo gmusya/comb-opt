@@ -87,6 +87,13 @@ std::vector<std::vector<tsp::Vertex>> GetComps(const tsp::AdjacencyLists& adj_li
 void RemoveBlackCycles(MPSolver* solver, const MPObjective* objective,
                        const std::vector<std::vector<MPVariable*>>& is_edge_taken,
                        const std::string& output) {
+  static int calls = 0;
+  static int cycles = 0;
+  const MPSolver::ResultStatus result_status = solver->Solve();
+  if (result_status != MPSolver::OPTIMAL) {
+    LOG(FATAL) << "The problem does not have an optimal solution!";
+  }
+  std::cerr << "RemoveBlackCycles start: " << objective->Value() << std::endl;
   tsp::AdjacencyLists old_lists;
 
   while (true) {
@@ -95,7 +102,7 @@ void RemoveBlackCycles(MPSolver* solver, const MPObjective* objective,
     if (result_status != MPSolver::OPTIMAL) {
       LOG(FATAL) << "The problem does not have an optimal solution!";
     }
-    std::cerr << "LB: " << objective->Value() << std::endl;
+    std::cerr << "Score: " << objective->Value() << std::endl;
     PrintState(is_edge_taken, output);
 
     auto adj_lists = GetBlackEdges(is_edge_taken);
@@ -105,9 +112,13 @@ void RemoveBlackCycles(MPSolver* solver, const MPObjective* objective,
     old_lists = adj_lists;
 
     std::vector<std::vector<tsp::Vertex>> comps = GetComps(adj_lists);
-
+    if (comps.size() == 1) {
+      break;
+    }
+    ++calls;
     for (const auto& comp : comps) {
       MPConstraint* const c = solver->MakeRowConstraint(0, comp.size() - 1);
+      ++cycles;
       for (tsp::Vertex v : comp) {
         for (tsp::Vertex u : comp) {
           c->SetCoefficient(is_edge_taken[v][u], 1);
@@ -115,6 +126,8 @@ void RemoveBlackCycles(MPSolver* solver, const MPObjective* objective,
       }
     }
   }
+
+  std::cerr << "calls = " << calls << ", cycles = " << cycles << std::endl;
 }
 
 std::vector<std::vector<tsp::Vertex>>
@@ -212,9 +225,9 @@ void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
   int cnt = 0;
   output = output.substr(0, output.size() - 4);
 
+  // Try to find violated combs
   while (true) {
     RemoveBlackCycles(solver.get(), objective, is_edge_taken, output);
-
     auto teeth = GetTeeth(is_edge_taken);
     auto maybe_handles = GetPossibleHandles(is_edge_taken);
 
@@ -234,7 +247,7 @@ void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
     }
 
     int changes = 0;
-
+    static int violated_combs = 0;
     for (const auto& handle : maybe_handles) {
       if (handle.size() % 2 == 0 || handle.size() == 1) {
         continue;
@@ -273,7 +286,8 @@ void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
 
       int32_t bound = 3 * tooth_ids.size() + 1;
       std::cerr << "bound = " << bound << std::endl;
-
+      ++violated_combs;
+      std::cerr << "violated_combs = " << violated_combs << std::endl;
       MPConstraint* const qwe = solver->MakeRowConstraint(bound, solver->infinity());
       for (const auto& [key, cnt] : edges_to_ban) {
         const auto& [x, y] = key;
@@ -292,6 +306,7 @@ void LPLowerBound(const tsp::AdjacencyMatrix& matrix, std::string output) {
       break;
     }
   }
+  std::cerr << "Result: " << objective->Value() << std::endl;
 }
 
 ABSL_FLAG(std::string, input, {}, "Input file");
